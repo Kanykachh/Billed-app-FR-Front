@@ -15,17 +15,19 @@ export default class {
     })
     new Logout({ document, localStorage, onNavigate })
   }
-
   handleClickNewBill = () => {
+    console.log("Button clicked");
     this.onNavigate(ROUTES_PATH['NewBill'])
   }
 
   handleClickIconEye = (icon) => {
+    console.log("Eye icon clicked"); 
     const billUrl = icon.getAttribute("data-bill-url")
     const imgWidth = Math.floor($('#modaleFile').width() * 0.5)
     $('#modaleFile').find(".modal-body").html(`<div style='text-align: center;' class="bill-proof-container"><img width=${imgWidth} src=${billUrl} alt="Bill" /></div>`)
     $('#modaleFile').modal('show')
   }
+  
 
   getBills = () => {
     if (this.store) {
@@ -38,7 +40,7 @@ export default class {
             try {
               return {
                 ...doc,
-                date: formatDate(doc.date),
+                date: doc.date,
                 status: formatStatus(doc.status)
               }
             } catch(e) {
@@ -52,6 +54,7 @@ export default class {
               }
             }
           })
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
           console.log('length', bills.length)
         return bills
       })
