@@ -6,15 +6,33 @@ export default class NewBill {
     this.document = document
     this.onNavigate = onNavigate
     this.store = store
-    const formNewBill = this.document.querySelector(`form[data-testid="form-new-bill"]`)
-    formNewBill.addEventListener("submit", this.handleSubmit)
-    const file = this.document.querySelector(`input[data-testid="file"]`)
-    file.addEventListener("change", this.handleChangeFile)
-    this.fileUrl = null
-    this.fileName = null
-    this.billId = null
+    const formNewBill = this.document.querySelector(
+      `form[data-testid="form-new-bill"]`
+    );
+    formNewBill.addEventListener("submit", this.handleSubmit);
+    const file = this.document.querySelector(`input[data-testid="file"]`);
+    file.addEventListener("change", this.handleChangeFile);
+    this.fileUrl = null;
+    this.fileName = null;
+    this.billId = null;
     new Logout({ document, localStorage, onNavigate })
   }
+
+  fileValidation = file => {
+    // - On verifie fichier à uploader todo 3
+    const fileTypes = ["image/jpeg", "image/jpg", "image/png"];
+    if (!fileTypes.includes(file.type)) {
+      this.document
+        .querySelector(`input[data-testid="file"]`)
+        .classList.add("is-invalid");
+      return false;
+    }
+    this.document
+      .querySelector(`input[data-testid="file"]`)
+      .classList.remove("is-invalid");
+    return true;
+  };
+
   handleChangeFile = e => {
     e.preventDefault()
     const file = this.document.querySelector(`input[data-testid="file"]`).files[0]
@@ -25,6 +43,7 @@ export default class NewBill {
     formData.append('file', file)
     formData.append('email', email)
 
+    this.fileValidation(file) &&
     this.store
       .bills()
       .create({
@@ -56,7 +75,9 @@ export default class NewBill {
       fileUrl: this.fileUrl,
       fileName: this.fileName,
       status: 'pending'
-    }
+    };
+    if (!this.fileName) return;
+    //TODO 3 - si pas de fichier selectionné, submit impossible
     this.updateBill(bill)
     this.onNavigate(ROUTES_PATH['Bills'])
   }
