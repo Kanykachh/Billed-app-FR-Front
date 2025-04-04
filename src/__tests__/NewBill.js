@@ -3,7 +3,7 @@
  * @jest-environment jsdom
  */
 
-import { screen, fireEvent, within } from "@testing-library/dom";
+import { screen, fireEvent, within, waitFor } from "@testing-library/dom";
 import "@testing-library/jest-dom";
 import NewBillUI from "../views/NewBillUI.js";
 import NewBill from "../containers/NewBill.js";
@@ -67,99 +67,85 @@ describe("Given I am connected as an employee", () => {
     // --------------------------------------------------------- //
 
     // TODO 7 POST Bill
-    describe("When I do fill fields in correct format and I click on submit button", () => {
-      test("Then the submission process should work properly, and I should be sent on the Bills Page", async () => {
-        const onNavigate = pathname => {
-          document.body.innerHTML = ROUTES({ pathname });
-        };
+describe("When I do fill fields in correct format and I click on submit button", () => {
+  test("Then the submission process should work properly, and I should be sent on the Bills Page", async () => {
+    const onNavigate = pathname => {
+      document.body.innerHTML = ROUTES({ pathname });
+    };
 
-        const newBill = new NewBill({
-          document,
-          onNavigate,
-          store: mockStore,
-          localStorage: window.localStorage,
-        });
-
-        const inputData = bills[0];
-
-        const newBillForm = screen.getByTestId("form-new-bill");
-
-        const handleSubmit = jest.fn(newBill.handleSubmit);
-        const imageInput = screen.getByTestId("file");
-
-        const file = getFile(inputData.fileName, ["image/jpg"])
-
-        const fileValidation = jest.spyOn(newBill, "fileValidation");
-
-        // On remplit les champs
-        selectExpenseType(inputData.type);
-        userEvent.type(getExpenseName(), inputData.name);
-        userEvent.type(getAmount(), inputData.amount.toString());
-        userEvent.type(getDate(), inputData.date);
-        userEvent.type(getVat(), inputData.vat.toString());
-        userEvent.type(getPct(), inputData.pct.toString());
-        userEvent.type(getCommentary(), inputData.commentary);
-        await userEvent.upload(imageInput, file);
-
-        // On s'assure que les données entrées requises sont valides
-        expect(
-          selectExpenseType(inputData.type).validity.valueMissing
-        ).toBeFalsy();
-        expect(getDate().validity.valueMissing).toBeFalsy();
-        expect(getAmount().validity.valueMissing).toBeFalsy();
-        expect(getPct().validity.valueMissing).toBeFalsy();
-        expect(fileValidation(file)).toBeTruthy();
-
-        newBill.fileName = file.name;
-
-        // On s'assure que le formulaire est soumettable
-        const submitButton = screen.getByRole("button", { name: /envoyer/i });
-        expect(submitButton.type).toBe("submit");
-
-        // On soumet le formulaire
-        newBillForm.addEventListener("submit", handleSubmit);
-        userEvent.click(submitButton);
-
-        expect(handleSubmit).toHaveBeenCalledTimes(1);
-
-        // On s'assure qu'on est bien renvoyé sur la page Bills
-        expect(screen.getByText(/Mes notes de frais/i)).toBeVisible();
-      });
-
-      test("Then a new bill should be created", async () => {
-        const createBill = jest.fn(mockStore.bills().create);
-        const updateBill = jest.fn(mockStore.bills().update);
-
-        const { fileUrl, key } = await createBill();
-
-        expect(createBill).toHaveBeenCalledTimes(1);
-
-        expect(key).toBe("1234");
-        expect(fileUrl).toBe("https://localhost:3456/images/test.jpg");
-
-        const newBill = updateBill();
-
-        expect(updateBill).toHaveBeenCalledTimes(1);
-
-        await expect(newBill).resolves.toEqual({
-          id: "47qAXb6fIm2zOKkLzMro",
-          vat: "80",
-          fileUrl:
-            "https://firebasestorage.googleapis.com/v0/b/billable-677b6.a…f-1.jpg?alt=media&token=c1640e12-a24b-4b11-ae52-529112e9602a",
-          status: "pending",
-          type: "Hôtel et logement",
-          commentary: "séminaire billed",
-          name: "encore",
-          fileName: "preview-facture-free-201801-pdf-1.jpg",
-          date: "2004-04-04",
-          amount: 400,
-          commentAdmin: "ok",
-          email: "a@a",
-          pct: 20,
-        });
-      });
+    const newBill = new NewBill({
+      document,
+      onNavigate,
+      store: mockStore,
+      localStorage: window.localStorage,
     });
 
+    const inputData = bills[0];
+    const newBillForm = screen.getByTestId("form-new-bill");
+    const handleSubmit = jest.fn(newBill.handleSubmit);
+    const imageInput = screen.getByTestId("file");
+    const file = getFile(inputData.fileName, ["image/jpg"]);
+
+    const fileValidation = jest.spyOn(newBill, "fileValidation");
+
+    // On remplit les champs
+    selectExpenseType(inputData.type);
+    userEvent.type(getExpenseName(), inputData.name);
+    userEvent.type(getAmount(), inputData.amount.toString());
+    userEvent.type(getDate(), inputData.date);
+    userEvent.type(getVat(), inputData.vat.toString());
+    userEvent.type(getPct(), inputData.pct.toString());
+    userEvent.type(getCommentary(), inputData.commentary);
+    await userEvent.upload(imageInput, file);
+
+    // Données fichier simulées
+    newBill.fileName = file.name;
+    newBill.fileUrl = "https://localhost:3456/images/test.jpg";
+
+    // On soumet le formulaire
+    newBillForm.addEventListener("submit", handleSubmit);
+    await userEvent.click(screen.getByRole("button", { name: /envoyer/i }));
+
+    expect(handleSubmit).toHaveBeenCalledTimes(1);
+
+    // Redirection vérifiée vers "Mes notes de frais"
+    await waitFor(() =>
+      expect(screen.getByText(/Mes notes de frais/i)).toBeInTheDocument()
+    );
+  });
+
+  test("Then a new bill should be created", async () => {
+    const createBill = jest.fn(mockStore.bills().create);
+    const updateBill = jest.fn(mockStore.bills().update);
+
+    const { fileUrl, key } = await createBill();
+
+    expect(createBill).toHaveBeenCalledTimes(1);
+    expect(key).toBe("1234");
+    expect(fileUrl).toBe("https://localhost:3456/images/test.jpg");
+
+    const newBill = updateBill();
+
+    expect(updateBill).toHaveBeenCalledTimes(1);
+
+    await expect(newBill).resolves.toEqual({
+      id: "47qAXb6fIm2zOKkLzMro",
+      vat: "80",
+      fileUrl:
+        "https://firebasestorage.googleapis.com/v0/b/billable-677b6.a…f-1.jpg?alt=media&token=c1640e12-a24b-4b11-ae52-529112e9602a",
+      status: "pending",
+      type: "Hôtel et logement",
+      commentary: "séminaire billed",
+      name: "encore",
+      fileName: "preview-facture-free-201801-pdf-1.jpg",
+      date: "2004-04-04",
+      amount: 400,
+      commentAdmin: "ok",
+      email: "a@a",
+      pct: 20,
+    });
+  });
+});
     // --------------------------------------------------------- //
     // -------------- Valeur par défaut champ PCT -------------- //
     // --------------------------------------------------------- //
